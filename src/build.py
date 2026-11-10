@@ -171,6 +171,31 @@ for t in T2:
         need(t, 4 <= len(o["sents"]) <= 8, f"order paragraph has {len(o['sents'])} sentences (want 4-8)")
         need(t, not re.search(r"\b(e\.g|i\.e)\.", t["model"][o["para"]]), "order paragraph must not contain e.g./i.e.")
 
+# ---------------------------------------------------------------- Brainstorm trainer
+import content_bs_bank as BB
+BS = load(["content_bs_a", "content_bs_b", "content_bs_c", "content_bs_d"], "QS")
+lens_keys, topic_keys = [l[0] for l in BB.LENSES], [t[0] for t in BB.TOPICS]
+t2_prompts = {re.sub(r"\W+", " ", re.sub(r"<[^>]+>", "", t["prompt"])).strip().lower() for t in T2}
+need({"id": "brainstorm"}, len(BS) == 60, f"expected 60 brainstorm questions, found {len(BS)}")
+need({"id": "brainstorm"}, [q["id"] for q in BS] == [f"b{i:02d}" for i in range(1, len(BS) + 1)], "brainstorm ids must run b01, b02, ... in order")
+for k in topic_keys:
+    need({"id": "brainstorm"}, sum(1 for q in BS if q["topic"] == k) == 5, f"topic {k} needs 5 questions")
+for k, _ in G.ETYPES:
+    need({"id": "brainstorm"}, sum(1 for q in BS if q["etype"] == k) == 10, f"essay type {k} needs 10 questions")
+for q in BS:
+    need(q, q["id"] not in ids, "duplicate id"); ids.add(q["id"])
+    need(q, q["topic"] in topic_keys, "unknown topic")
+    need(q, q["etype"] in dict(G.ETYPES), "unknown essay type")
+    need(q, re.sub(r"\W+", " ", q["q"]).strip().lower() not in t2_prompts, "repeats a Task 2 essay question")
+    need(q, len(q["wrong"]) == 2 and q["focus"] not in q["wrong"], "decode needs 1 focus and 2 different traps")
+    need(q, len(q["ideas"]) >= 6, "needs at least 6 model ideas")
+    need(q, all(i[0] in lens_keys and i[1] in ("a", "b") and len(i) == 3 for i in q["ideas"]), "idea needs a known lens and side a/b")
+    need(q, {i[1] for i in q["ideas"]} == {"a", "b"}, "ideas must cover both sides")
+    need(q, len({i[0] for i in q["ideas"]}) >= 4, "ideas must use at least 4 lenses")
+    need(q, len(q["chains"]) == 2 and all(len(c) == 4 and all(len(x.split()) >= (3 if j == 0 else 4) for j, x in enumerate(c)) for c in q["chains"]), "needs 2 chains of idea, why, so what, example")
+for k in topic_keys:
+    need({"id": "bank"}, len(BB.BANK.get(k, [])) >= 6 and all(r[2] in lens_keys for r in BB.BANK[k]), f"idea bank for {k} needs 6 rows with known lenses")
+
 if problems:
     print("PROBLEMS:")
     for q in problems:
@@ -182,7 +207,7 @@ for t in T1 + T2:
     if t["task"] == 1:
         t["cloze"].setdefault("extra", [])
 
-DATA = dict(T1=T1, T2=T2, G=dict(
+DATA = dict(T1=T1, T2=T2, BS=BS, BB=dict(lenses=BB.LENSES, topics=BB.TOPICS, sides=BB.SIDES, bank=BB.BANK), G=dict(
     etypes=G.ETYPES, crit1=[[a, b, {str(k): v for k, v in c.items()}] for a, b, c in G.CRIT_T1],
     crit2=[[a, b, {str(k): v for k, v in c.items()}] for a, b, c in G.CRIT_T2],
     charts=G.CHARTS_TOOLKIT, plan=G.T1_PLAN, skeleton=G.T2_SKELETON, linkers=G.LINKERS, hedging=G.HEDGING, mistakes=G.MISTAKES))
@@ -197,4 +222,4 @@ page = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<met
         '<div class="layout"><nav class="rail" id="rail" aria-label="Tasks"></nav><main id="work" tabindex="-1"></main></div>\n'
         '<script>window.W=' + data + ';</script>\n<script>\n' + js + '\n</script>\n</body>\n</html>\n')
 open(OUT, "w", encoding="utf-8").write(page)
-print(f"OK  {len(T1)} Task 1 reports, {len(T2)} Task 2 essays · page written: {len(page) // 1024} KB")
+print(f"OK  {len(T1)} Task 1 reports, {len(T2)} Task 2 essays, {len(BS)} brainstorm questions · page written: {len(page) // 1024} KB")

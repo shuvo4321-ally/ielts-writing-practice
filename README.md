@@ -49,6 +49,19 @@ Each step asks you to answer in a different way.
 
 There is also a **Toolkit** page with the marking criteria in plain words, language for every chart type, a structure for each essay type, linking words and the most common mistakes.
 
+### Brainstorm trainer: 60 more Task 2 questions
+
+For practising **finding ideas**, separately from writing. The 60 questions are new: none of them repeats the 20 essays above. There are 5 for each of 12 topics (education, technology, environment, health, work, crime, cities, family, media, culture, government, science) and 10 for each essay type. "Start a new question" always serves one you have not finished.
+
+| Step | What you do |
+|---|---|
+| 1 Decode | Choose the real focus of the question out of three (two are traps: too broad, or a twisted claim), and name the essay type |
+| 2 Brainstorm | Type short ideas into six lens boxes (Money, Individuals, Society, Government, Time, Health and environment) against a 3-minute timer |
+| 3 Develop | Pick your two best ideas and grow each one into a chain: Why? → So what? → Example, then write your position in one sentence |
+| 4 Compare | Your ideas next to a model idea map for each lens (tick the ones you had), your chains next to two model chains, your position next to the model |
+
+The trainer records which lenses you use and which you miss, and names your weakest lens. The **Idea bank** page has six reusable ideas with ready examples for each of the 12 topics.
+
 ## An honest note
 
 The live checks in the Write step count words, paragraphs, figures and linking words, and look for an overview, a position, examples and repeated words. They **cannot** judge ideas or grammar the way an examiner does. That is why the Compare step has you score yourself against the four band descriptors.
@@ -78,6 +91,8 @@ Before writing `index.html`, the build checks every task:
 | `src/content_t1_a.py` … `content_t1_e.py` | The 20 Task 1 reports |
 | `src/content_t2_a.py` … `content_t2_e.py` | The 20 Task 2 essays |
 | `src/content_global.py` | Criteria descriptors, essay types, toolkit |
+| `src/content_bs_a.py` … `content_bs_d.py` | The 60 Brainstorm trainer questions, with model idea maps and chains |
+| `src/content_bs_bank.py` | The six lenses, the 12 topics and the idea bank |
 | `src/build.py` | Validates the content and writes the page |
 | `src/app.js`, `src/style.css` | The workbench, charts, exercises and checks |
 

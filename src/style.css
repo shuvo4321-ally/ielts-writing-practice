@@ -247,3 +247,25 @@ textarea.wbox { width: 100%; min-height: 380px; resize: vertical; font-family: v
   .topbar .prog #progtxt { display: none; }
   .topbar .prog .pbar { width: 60px; }
 }
+
+/* ---------- brainstorm trainer ---------- */
+.lgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 12px; }
+.lcell { background: #fff; border: 1px solid var(--line); border-top: 3px solid var(--navy); padding: 10px 12px 12px; }
+.lcell h4 { font-size: 15px; margin: 0 0 2px; }
+.lcell .lq { font-family: var(--f-ui); font-size: 12.5px; color: var(--faint); line-height: 1.35; margin-bottom: 8px; }
+.lcell textarea, .chain textarea, textarea.pos { width: 100%; resize: vertical; font-family: var(--f-text); font-size: 16px; line-height: 1.45; padding: 8px 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); }
+.lcell textarea { min-height: 112px; }
+.chain textarea { min-height: 52px; }
+textarea.pos { min-height: 60px; border-color: var(--navy); }
+.chain { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--navy); padding: 12px 16px; margin: 10px 0; }
+.chain.model { border-left-color: var(--same-edge); }
+.chain .ci2 { font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+.chain label { display: block; font-family: var(--f-ui); font-size: 13px; font-weight: 700; color: var(--muted); margin: 10px 0 3px; }
+.chain .crow { font-size: 15.5px; margin: 4px 0; }
+.lt { font-family: var(--f-ui); font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--faint); margin-right: 4px; }
+.tagk.sa { background: var(--navy); } .tagk.sb { background: var(--same-edge); }
+.tick { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; width: 100%; text-align: left; background: #fff; border: 1px solid var(--line); padding: 7px 9px; margin: 0 0 6px; font-family: var(--f-text); font-size: 15.5px; line-height: 1.4; color: var(--ink); }
+.tick:hover { border-color: var(--navy); }
+.tick .bx { width: 18px; height: 18px; border: 1.5px solid var(--faint); display: grid; place-items: center; font-family: var(--f-ui); font-size: 12px; font-weight: 700; margin-top: 2px; background: #fff; }
+.tick.on { background: var(--ok-soft); border-color: var(--ok); } .tick.on .bx { background: var(--ok); border-color: var(--ok); color: #fff; } .tick.on .bx::after { content: "✓"; }
+.rail .nv .small { color: inherit; opacity: .75; font-size: 12px; }

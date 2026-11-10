@@ -10,7 +10,7 @@ const ETYPE = {}; D.G.etypes.forEach(e => { ETYPE[e[0]] = e[1]; });
 
 /* ================================================================ saved state (this browser only) */
 const KEY = 'ielts-writing-lab-v1';
-let S = { done: {}, a: {}, draft: {}, self: {}, timer: {} };
+let S = { done: {}, a: {}, draft: {}, self: {}, timer: {}, bs: {} };
 try { const raw = JSON.parse(localStorage.getItem(KEY) || 'null'); if (raw) Object.keys(S).forEach(k => { if (raw[k]) S[k] = raw[k]; }); } catch (e) {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
 const stepState = (t, key) => { const a = S.a[t.id] || (S.a[t.id] = {}); return a[key] || (a[key] = {}); };
@@ -174,7 +174,8 @@ let route = { page: 'home', id: null, step: null };
 function parseHash() {
   const h = (location.hash || '#home').slice(1).split('/');
   if (BY[h[0]]) { const t = BY[h[0]], ks = stepsOf(t).map(s => s[0]); return { page: 'task', id: h[0], step: ks.indexOf(h[1]) >= 0 ? h[1] : 'lang' }; }
-  return { page: h[0] === 'toolkit' ? 'toolkit' : 'home' };
+  if (BSBY[h[0]]) return { page: 'bsq', id: h[0], step: BSTEPS.some(s => s[0] === h[1]) ? h[1] : 'decode' };
+  return { page: h[0] === 'toolkit' ? 'toolkit' : h[0] === 'brainstorm' ? 'bs' : h[0] === 'ideas' ? 'ideas' : 'home' };
 }
 function go(hash) { if (location.hash === hash) { route = parseHash(); render(); } else location.hash = hash; }
 function renderRail() {
@@ -183,7 +184,7 @@ function renderRail() {
     return `<a class="rt${done ? ' done' : ''}${route.id === t.id ? ' on' : ''}" href="#${t.id}"><span class="n">${t.id.slice(-2)}</span><span>${esc(t.short)}<span class="ty">${esc(t.label)}</span></span><span class="st">${done ? '✓' : c + '/7'}</span></a>`;
   };
   const tot = TASKS.length * 7, dn = TASKS.reduce((a, t) => a + doneCount(t), 0);
-  rail.innerHTML = `<a class="nv${route.page === 'home' ? ' on' : ''}" href="#home">Home</a><a class="nv${route.page === 'toolkit' ? ' on' : ''}" href="#toolkit">Toolkit</a>` +
+  rail.innerHTML = `<a class="nv${route.page === 'home' ? ' on' : ''}" href="#home">Home</a><a class="nv${route.page === 'toolkit' ? ' on' : ''}" href="#toolkit">Toolkit</a><a class="nv${route.page === 'bs' || route.page === 'bsq' ? ' on' : ''}" href="#brainstorm">Brainstorm trainer <span class="small">${bsDoneN()}/${BSQ.length}</span></a><a class="nv${route.page === 'ideas' ? ' on' : ''}" href="#ideas">Idea bank</a>` +
     `<div class="rg"><span>Task 1 · ${D.T1.length}</span><span>${D.T1.filter(t => doneCount(t) === 7).length} done</span></div>${D.T1.map(item).join('')}` +
     `<div class="rg"><span>Task 2 · ${D.T2.length}</span><span>${D.T2.filter(t => doneCount(t) === 7).length} done</span></div>${D.T2.map(item).join('')}`;
   $('#progfill').style.width = Math.round(dn / tot * 100) + '%';
@@ -192,9 +193,10 @@ function renderRail() {
 let lastTask = null;
 function render() {
   const before = lastTask; route = parseHash(); document.body.classList.remove('railopen');
-  if (route.page === 'task') renderTask(); else if (route.page === 'toolkit') renderToolkit(); else renderHome();
-  renderRail(); lastTask = route.page === 'task' ? route.id : null;
-  if (route.page === 'task' && before === route.id) { const s = $('.stepper'); if (s) s.scrollIntoView(); } else window.scrollTo(0, 0);
+  curBS = null;
+  if (route.page === 'task') renderTask(); else if (route.page === 'toolkit') renderToolkit(); else if (route.page === 'bs') renderBSHome(); else if (route.page === 'bsq') renderBSRound(); else if (route.page === 'ideas') renderIdeas(); else renderHome();
+  renderRail(); lastTask = route.page === 'task' || route.page === 'bsq' ? route.id : null;
+  if ((route.page === 'task' || route.page === 'bsq') && before === route.id) { const s = $('.stepper'); if (s) s.scrollIntoView(); } else window.scrollTo(0, 0);
 }
 window.addEventListener('hashchange', render);
 
@@ -204,6 +206,7 @@ function renderHome() {
   work.innerHTML = `<div class="hero"><h1>IELTS Writing Workbench</h1><div class="sub">20 Task 1 reports and 20 Task 2 essays. Each one has its own data, topic, exercises and band 9 model answer.</div>
 <p>You do not read a model and move on. Every task is a <b>seven-step workbench</b>, and each step asks you to answer in a different way: select, group, fill gaps from a bank, tap words, match, upgrade, put in order, and finally write.</p>
 <div class="actions"><a class="primary" style="text-decoration:none" href="#t1-01">Start Task 1 · 01</a><a class="ghost" style="text-decoration:none" href="#t2-01">Start Task 2 · 01</a><a class="ghost" style="text-decoration:none" href="#toolkit">Open the Toolkit</a></div></div>
+<div class="box get"><span class="lab">Stuck for ideas?</span><p style="margin:0">The <a href="#brainstorm"><b>Brainstorm trainer</b></a> has 60 new Task 2 questions for practising a 3-minute routine that finds ideas every time. The <a href="#ideas"><b>Idea bank</b></a> has reusable ideas and examples for 12 common topics.</p></div>
 <h2>The seven steps</h2><div class="cols">
 <div class="card edge"><h3>Task 1 (report)</h3><ol><li><b>Language:</b> the plan, the exact data and the words for this task.</li><li><b>Read the data:</b> choose the 3 key features out of 7 statements.</li><li><b>Overview:</b> choose the 2 sentences that make a real overview.</li><li><b>Group:</b> sort the data into the groups you would write about.</li><li><b>Complete:</b> rebuild a band 9 paragraph from a word bank.</li><li><b>Write:</b> your own report, with a timer and live checks.</li><li><b>Compare:</b> your report beside the model, then score yourself.</li></ol></div>
 <div class="card edge"><h3>Task 2 (essay)</h3><ol><li><b>Ideas:</b> an idea bank with examples, and the vocabulary for the topic.</li><li><b>Decode:</b> tap the task words in the question and name the essay type.</li><li><b>Plan:</b> choose the best thesis and match ideas to examples.</li><li><b>Upgrade:</b> pick the band 9 rewrite of three weak sentences.</li><li><b>Order:</b> rebuild a scrambled body paragraph.</li><li><b>Write:</b> your own essay, with a timer and live checks.</li><li><b>Compare:</b> your essay beside the model, then score yourself.</li></ol></div></div>
@@ -529,6 +532,212 @@ function stepCmp(t) {
   h += `<div class="actions">${next ? `<a class="primary" style="text-decoration:none" href="#${next.id}">Next task: ${esc(next.short)} →</a>` : ''}<a class="ghost" style="text-decoration:none" href="#home">All tasks</a></div>`;
   return h;
 }
+
+/* ================================================================ brainstorm trainer */
+const BB = D.BB, BSQ = D.BS, BSBY = {}; BSQ.forEach(q => { BSBY[q.id] = q; });
+const LENS = {}; BB.lenses.forEach(l => { LENS[l[0]] = l; });
+const TOPIC = {}; BB.topics.forEach(t => { TOPIC[t[0]] = t[1]; });
+const BSTEPS = [['decode', 'Decode'], ['grid', 'Brainstorm'], ['dev', 'Develop'], ['cmp', 'Compare']];
+const bsA = id => { const a = S.bs.a || (S.bs.a = {}); return a[id] || (a[id] = {}); };
+const bsDone = id => !!(S.bs.done && S.bs.done[id]);
+const bsDoneN = () => BSQ.filter(q => bsDone(q.id)).length;
+const linesOf = s => String(s || '').split('\n').map(x => x.trim()).filter(Boolean);
+const myIdeas = a => { const out = []; BB.lenses.forEach(l => linesOf((a.grid || {})[l[0]]).forEach(t => out.push([l[0], t]))); return out; };
+const nwords = s => (String(s || '').match(/[A-Za-z0-9'’%-]+/g) || []).length;
+const sideTag = (q, s) => `<span class="tagk ${s === 'a' ? 'sa' : 'sb'}">${esc(BB.sides[q.etype][s === 'a' ? 0 : 1])}</span>`;
+/* the next question is always one you have not finished: one you started first, otherwise a random new one */
+function nextBS(exclude) {
+  const left = BSQ.filter(q => !bsDone(q.id) && q.id !== exclude); if (!left.length) return null;
+  const started = left.filter(q => S.bs.a && S.bs.a[q.id] && S.bs.a[q.id].dec);
+  const pool = started.length ? started : left; return pool[Math.floor(Math.random() * pool.length)].id;
+}
+const shortQ = q => { const s = q.q.split(/(?<=[.?!])\s/)[0]; return s.length > 92 ? s.slice(0, 90).replace(/\s+\S*$/, '') + '…' : s; };
+
+function lensStats() {
+  const ids = BSQ.filter(q => bsDone(q.id)).map(q => q.id), st = {};
+  BB.lenses.forEach(l => { st[l[0]] = { used: 0, miss: 0, avail: 0 }; });
+  ids.forEach(id => { const d = S.bs.done[id]; (d.lens || []).forEach(k => st[k] && st[k].used++); (d.miss || []).forEach(k => st[k] && st[k].miss++); (d.avail || []).forEach(k => st[k] && st[k].avail++); });
+  return { n: ids.length, st };
+}
+function renderBSHome() {
+  const n = bsDoneN(), nx = nextBS(), ls = lensStats();
+  const cont = BSQ.find(q => !bsDone(q.id) && S.bs.a && S.bs.a[q.id] && S.bs.a[q.id].dec);
+  let h = `<div class="hero"><h1>Brainstorm trainer</h1><div class="sub">60 new Task 2 questions, none of them from your 20 essays. Practise finding ideas in three minutes instead of waiting for inspiration.</div>
+<p>You only need <b>two good ideas per body paragraph</b>. The trainer teaches a routine that finds them every time: decode the question, run it through six lenses, then grow your best two ideas into a chain of <i>why → so what → example</i>.</p>
+<div class="actions">${nx ? `<a class="primary" style="text-decoration:none" href="#${cont ? cont.id : nx}">${cont ? 'Continue question ' + cont.id.slice(1) : 'Start a new question'}</a>` : '<span class="result good" style="margin:0">You have finished all 60 questions.</span>'}<a class="ghost" style="text-decoration:none" href="#ideas">Open the idea bank</a><span class="small">${n} of ${BSQ.length} done · each new question is one you have not done</span></div></div>
+<h2>The 3-minute routine</h2><div class="cols">
+<div class="card edge"><h3>1 · Decode (30 seconds)</h3><p>Find the <b>exact claim</b>, not just the topic, and name the essay type. Most weak essays brainstorm the topic instead of the claim.</p></div>
+<div class="card edge"><h3>2 · Six lenses (90 seconds)</h3><p>Ask “what does this change for…?” with each lens below. Short notes only. Two or three lenses will be rich; the rest may give nothing, and that is normal.</p></div>
+<div class="card edge"><h3>3 · Pick two and chain (60 seconds)</h3><p>Choose your two strongest ideas. For each: <b>Why?</b> (reason) → <b>So what?</b> (result) → <b>Example</b>. That chain is your body paragraph.</p></div></div>
+<h2>The six lenses</h2><div class="tablewrap"><table><tr><th>Lens</th><th>Ask yourself</th>${ls.n ? '<th>Your record</th>' : ''}</tr>${BB.lenses.map(l => { const s = ls.st[l[0]]; return `<tr><td class="k">${esc(l[1])}</td><td>${esc(l[2])}</td>${ls.n ? `<td class="small">ideas in ${s.used} of ${ls.n} rounds${s.miss ? ` · missed model ideas in ${s.miss}` : ''}</td>` : ''}</tr>`; }).join('')}</table></div>`;
+  if (ls.n >= 2) {
+    const rank = BB.lenses.map(l => [l, ls.st[l[0]]]).filter(x => x[1].avail).sort((a, b) => (a[1].used - b[1].used) || (b[1].miss - a[1].miss));
+    const weak = rank[0];
+    if (weak && weak[1].used < ls.n) h += `<div class="box warn"><span class="lab">Your weakest lens: ${esc(weak[0][1])}</span><p style="margin:0">You wrote ideas with this lens in only ${weak[1].used} of ${ls.n} rounds. Next time, ask: <i>${esc(weak[0][2])}</i></p></div>`;
+  }
+  h += BB.topics.map(t => `<h2>${esc(t[1])}</h2><div class="tl">${BSQ.filter(q => q.topic === t[0]).map(q => { const d = bsDone(q.id); return `<a class="${d ? 'done' : ''}" href="#${q.id}"><span class="n">${q.id.slice(1)}</span><span>${esc(shortQ(q))}<span class="small" style="display:block">${esc(ETYPE[q.etype])}</span></span><span class="st">${d ? '✓' : ''}</span></a>`; }).join('')}</div>`).join('');
+  work.innerHTML = h + '<p class="small">Your brainstorms are saved in this browser only.</p>';
+}
+function renderIdeas() {
+  work.innerHTML = `<div class="hero"><h1>Idea bank</h1><div class="sub">Six reusable ideas for each of 12 common IELTS topics, each with a ready example.</div><p>These ideas fit many different questions on the same topic. Learn them, then adapt the example to the exact claim in front of you. The lens column shows where each idea comes from, so you can see which lenses suit which topic.</p><div class="actions"><a class="primary" style="text-decoration:none" href="#brainstorm">Back to the Brainstorm trainer</a></div></div>` +
+    BB.topics.map(t => `<h2>${esc(t[1])}</h2><div class="tablewrap"><table><tr><th style="width:38%">Idea</th><th>Ready example</th><th style="width:14%">Lens</th></tr>${BB.bank[t[0]].map(r => `<tr><td class="k">${esc(r[0])}</td><td>${esc(r[1])}</td><td class="small">${esc(LENS[r[2]][1])}</td></tr>`).join('')}</table></div>`).join('');
+}
+
+let curBS = null, curBSStep = null;
+const bsT = { id: null, left: 180, end: 0, iv: null };
+function renderBSRound() {
+  const q = BSBY[route.id]; curBS = q; curBSStep = route.step;
+  const a = bsA(q.id);
+  const head = `<div class="taskhead"><span class="pnum">Brainstorm · ${q.id.slice(1)}</span><span class="ptype">${esc(TOPIC[q.topic])} · ${esc(ETYPE[q.etype])}</span></div>`;
+  const doneOf = k => k === 'decode' ? !!(a.dec && a.dec.chk) : k === 'grid' ? myIdeas(a).length >= 2 : k === 'dev' ? !!a.devchk : bsDone(q.id);
+  const stepper = `<div class="stepper" role="tablist">${BSTEPS.map((s, i) => `<button type="button" role="tab" class="${s[0] === curBSStep ? 'on' : ''}${doneOf(s[0]) ? ' done' : ''}" data-bs="step" data-s="${s[0]}"><span class="ci">${doneOf(s[0]) && s[0] !== curBSStep ? '✓' : i + 1}</span>${s[1]}</button>`).join('')}</div>`;
+  const card = `<details class="taskcard" open><summary>The question</summary><div class="tc"><div class="lim">Task 2 · plan in about 5 minutes, write at least 250 words</div><div class="prompt">${esc(q.q)}</div></div></details>`;
+  const fn = { decode: bsDecode, grid: bsGrid, dev: bsDev, cmp: bsCmp }[curBSStep];
+  const ks = BSTEPS.map(s => s[0]), i = ks.indexOf(curBSStep);
+  const nav = `<div class="stepnav">${i > 0 ? `<button type="button" class="ghost" data-bs="step" data-s="${ks[i - 1]}">← ${BSTEPS[i - 1][1]}</button>` : '<a class="ghost" style="text-decoration:none" href="#brainstorm">← All questions</a>'}${i < ks.length - 1 ? `<button type="button" class="primary" data-bs="step" data-s="${ks[i + 1]}">${BSTEPS[i + 1][1]} →</button>` : '<span></span>'}</div>`;
+  work.innerHTML = head + card + stepper + `<div class="stepbody">${fn(q, a)}${nav}</div>`;
+  if (curBSStep === 'grid') { bsCount(); bsTick(); }
+}
+function bsDecode(q, a) {
+  const d = a.dec || {}, chk = !!d.chk, opts = shuffled([q.focus].concat(q.wrong), q.id);
+  let h = `<h2>Decode the question</h2><p>Before you look for ideas, decide exactly what you are being asked. Which sentence states the <b>real focus</b> of this question?</p>`;
+  opts.forEach((o, i) => {
+    const on = d.f === o, right = o === q.focus; let cls = 'opt radio';
+    if (chk) { if (on && right) cls += ' ok'; else if (on) cls += ' no'; else if (right) cls += ' miss'; } else if (on) cls += ' sel';
+    h += `<button type="button" class="${cls}" data-bs="focus" data-i="${i}"${chk ? ' disabled' : ''}><span class="bx"></span><span>${esc(o)}</span></button>`;
+  });
+  h += `<h3>Which essay type is it?</h3>`;
+  D.G.etypes.forEach(e => {
+    const on = d.t === e[0], right = e[0] === q.etype; let cls = 'opt radio';
+    if (chk) { if (on && right) cls += ' ok'; else if (on) cls += ' no'; else if (right) cls += ' miss'; } else if (on) cls += ' sel';
+    h += `<button type="button" class="${cls}" data-bs="ety" data-v="${e[0]}"${chk ? ' disabled' : ''}><span class="bx"></span><span>${esc(e[1])}</span></button>`;
+  });
+  if (chk) {
+    const fOk = d.f === q.focus, tOk = d.t === q.etype;
+    h += `<div class="result ${fOk && tOk ? 'good' : fOk || tOk ? 'mid' : 'low'}">Focus: ${fOk ? 'correct' : 'not quite'}. Essay type: ${tOk ? 'correct' : 'it is <b>' + esc(ETYPE[q.etype]) + '</b>'}.</div>
+<div class="box tech"><span class="lab">How to read this question</span><p>${q.note}</p></div>
+<div class="box same"><span class="lab">For this essay type, look for ideas on both sides</span><p style="margin:0">${sideTag(q, 'a')} and ${sideTag(q, 'b')}</p></div>
+<div class="actions"><button type="button" class="ghost" data-bs="redec">Try again</button></div>`;
+  } else h += `<div class="actions"><button type="button" class="primary" data-bs="deccheck"${d.f && d.t ? '' : ' disabled'}>Check</button></div>`;
+  return h;
+}
+function bsGrid(q, a) {
+  const g = a.grid || {};
+  return `<h2>Brainstorm with the six lenses</h2><p>Write <b>short notes, one idea per line</b>. Do not judge your ideas yet. Aim for at least 6 ideas in 4 or more lenses, and look for both ${sideTag(q, 'a')} and ${sideTag(q, 'b')}. The timer starts when you type.</p>
+<div class="timer" id="bstimer"><span class="tt" id="bstt">3:00</span><button type="button" class="ghost sm" data-bs="tstart" id="bstbtn">Start 3 minutes</button><span class="small" id="bscount"></span></div>
+<div class="box warn" id="bsup" hidden><span class="lab">Time is up</span><p style="margin:0">In the exam you would stop here and choose your two best ideas. Finish your line, then go to Develop.</p></div>
+<div class="lgrid">${BB.lenses.map(l => `<div class="lcell"><h4>${esc(l[1])}</h4><div class="lq">${esc(l[2])}</div><textarea data-bsin="grid" data-l="${l[0]}" aria-label="${esc(l[1])} ideas" placeholder="One idea per line">${esc(g[l[0]] || '')}</textarea></div>`).join('')}</div>`;
+}
+function bsCount() {
+  const el = $('#bscount'); if (!el || !curBS) return;
+  const ideas = myIdeas(bsA(curBS.id)), lenses = new Set(ideas.map(i => i[0])).size;
+  el.textContent = ideas.length + ' idea' + (ideas.length === 1 ? '' : 's') + ' · ' + lenses + ' of 6 lenses';
+}
+function bsFmt(s) { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }
+function bsTick() {
+  const mine = !!curBS && bsT.id === curBS.id, run = mine && !!bsT.iv;
+  const left = run ? (bsT.end - Date.now()) / 1000 : mine ? bsT.left : 180;
+  if (run && left <= 0) { clearInterval(bsT.iv); bsT.iv = null; bsT.left = 0; }
+  const tt = $('#bstt'), btn = $('#bstbtn'), up = $('#bsup'), box = $('#bstimer');
+  if (tt) tt.textContent = bsFmt(left);
+  if (btn) btn.textContent = bsT.iv && mine ? 'Pause' : mine && left <= 0 ? 'Restart' : mine && left < 180 ? 'Resume' : 'Start 3 minutes';
+  if (box) box.classList.toggle('low', mine && left <= 30);
+  if (up) up.hidden = !(mine && left <= 0);
+}
+function bsStart() { bsT.id = curBS.id; if (bsT.left <= 0) bsT.left = 180; bsT.end = Date.now() + bsT.left * 1000; clearInterval(bsT.iv); bsT.iv = setInterval(bsTick, 250); bsTick(); }
+function bsDev(q, a) {
+  const ideas = myIdeas(a);
+  if (ideas.length < 2) return `<h2>Develop two ideas</h2><div class="box warn"><span class="lab">First, brainstorm</span><p style="margin:0">Write at least two ideas in the lens grid, then come back here.</p></div>`;
+  const pick = (a.pick || []).filter(p => ideas.some(i => i[1] === p)); a.pick = pick;
+  const ch = a.ch || (a.ch = [{}, {}]);
+  let h = `<h2>Develop your two best ideas</h2><p>Choose the <b>two strongest</b> ideas from your list: the ones you can explain and support with an example. ${q.etype === 'twopart' ? 'Take one for each question.' : q.etype === 'problem' ? 'Take one cause or problem and one solution.' : 'For a balanced essay, you can take one from each side.'}</p>`;
+  ideas.forEach(i => { const on = pick.indexOf(i[1]) >= 0; h += `<button type="button" class="opt${on ? ' sel' : ''}" data-bs="pick" data-t="${esc(i[1])}"><span class="bx"></span><span><span class="lt">${esc(LENS[i[0]][1])}</span> ${esc(i[1])}</span></button>`; });
+  if (pick.length) {
+    h += `<h3>Grow each idea into a chain</h3>`;
+    pick.forEach((p, k) => {
+      const c = ch[k] || (ch[k] = {});
+      h += `<div class="chain"><div class="ci2">Idea ${k + 1}: ${esc(p)}</div>
+<label for="c${k}w">Why? (the reason behind it)</label><textarea id="c${k}w" data-bsin="ch" data-k="${k}" data-f="why">${esc(c.why || '')}</textarea>
+<label for="c${k}s">So what? (the result or consequence)</label><textarea id="c${k}s" data-bsin="ch" data-k="${k}" data-f="so">${esc(c.so || '')}</textarea>
+<label for="c${k}e">Example (a specific person, place, number or situation)</label><textarea id="c${k}e" data-bsin="ch" data-k="${k}" data-f="ex">${esc(c.ex || '')}</textarea></div>`;
+    });
+    h += `<h3>Your position in one sentence</h3><p class="small">${esc(posHint(q))}</p><textarea class="pos" data-bsin="pos" aria-label="Your position">${esc(a.pos || '')}</textarea>
+<div class="actions"><button type="button" class="primary" data-bs="devcheck">Check my plan</button><span class="small">${pick.length < 2 ? 'Choose one more idea.' : ''}</span></div><ul class="checks" id="devchecks">${a.devchk ? devChecks(q, a).map(c => `<li class="${c[0]}"><span>${c[1]}</span></li>`).join('') : ''}</ul>`;
+  }
+  return h;
+}
+function posHint(q) {
+  return { opinion: 'Say how far you agree, for example “I partly agree: …”.', discussion: 'Say which view you support, or what balance between them you prefer.', advdis: /outweigh/i.test(q.q) ? 'Say which side outweighs the other.' : 'Name the main advantage and the main disadvantage.', problem: 'Name the main cause and the solution you think works best.', twopart: 'Answer both questions briefly in one sentence.', posneg: 'Say whether the development is mainly positive or negative.' }[q.etype];
+}
+function devChecks(q, a) {
+  const out = [], ch = a.ch || [], pick = a.pick || [];
+  out.push([pick.length === 2 ? 'ok' : 'no', `<b>Ideas:</b> ${pick.length} of 2 chosen.`]);
+  pick.forEach((p, k) => {
+    const c = ch[k] || {}, nm = 'Idea ' + (k + 1);
+    const thin = ['why', 'so'].filter(f => nwords(c[f]) < 4);
+    out.push([thin.length ? 'no' : 'ok', `<b>${nm}, why and so what:</b> ${thin.length ? 'write at least a short phrase for ' + thin.map(f => f === 'why' ? '<i>why</i>' : '<i>so what</i>').join(' and ') + '.' : 'both explained.'}`]);
+    const ex = c.ex || '', vague = /\b(etc|and so on|many things|something|some people|things like that|lots of things)\b/i.test(ex);
+    const concrete = /\d/.test(ex) || /\s[A-Z][a-z]/.test(ex) || /\b(for example|for instance|imagine|an? [a-z]+ (who|in|with|on|from|at))\b/i.test(ex);
+    out.push([nwords(ex) < 6 ? 'no' : vague || !concrete ? 'warn' : 'ok', `<b>${nm}, example:</b> ${nwords(ex) < 6 ? 'too short. Describe one specific person, place, number or situation.' : vague ? 'it sounds vague. Replace “many things” or “some people” with one specific case.' : !concrete ? 'make it more specific: a named place, a number, or “a nurse who…”.' : 'specific enough to use.'}`]);
+  });
+  const pos = a.pos || '', pl = pos.toLowerCase();
+  const sig = { opinion: /\b(agree|disagree)\b/, discussion: /\b(i (believe|think|feel|support|prefer)|in my (view|opinion)|my view|better|best)\b/, advdis: /outweigh/i.test(q.q) ? /\boutweigh/ : /\b(advantage|benefit|disadvantage|drawback|outweigh)/, problem: /\b(cause|because|due to|caused|solution|solve|should|can be|could)\b/, twopart: /./, posneg: /\b(positive|negative|beneficial|harmful|good|bad)\b/ }[q.etype];
+  out.push([nwords(pos) < 8 ? 'no' : sig.test(pl) ? 'ok' : 'warn', `<b>Position:</b> ${nwords(pos) < 8 ? 'write one full sentence (8 or more words).' : sig.test(pl) ? 'clear.' : esc(posHint(q))}`]);
+  return out;
+}
+function bsCmp(q, a) {
+  const ideas = myIdeas(a), ticks = a.ticks || [], used = new Set(ideas.map(i => i[0]));
+  let h = `<h2>Compare with the model idea map</h2><p>For each lens, read the model ideas and tick the ones you had, or something close. The ideas you did not have show you where to look next time.</p>`;
+  BB.lenses.forEach(l => {
+    const mine = ideas.filter(i => i[0] === l[0]), model = q.ideas.map((m, i) => [m, i]).filter(x => x[0][0] === l[0]);
+    if (!mine.length && !model.length) return;
+    h += `<h3>${esc(l[1])}</h3><div class="cmp"><div class="pane mine"><h3>Your ideas</h3>${mine.length ? '<ul>' + mine.map(i => `<li>${esc(i[1])}</li>`).join('') + '</ul>' : '<p class="empty">Nothing in this lens.</p>'}</div><div class="pane model"><h3>Model ideas</h3>${model.length ? model.map(x => `<button type="button" class="tick${ticks.indexOf(x[1]) >= 0 ? ' on' : ''}" data-bs="tick" data-i="${x[1]}"><span class="bx"></span><span>${sideTag(q, x[0][1])}${esc(x[0][2])}</span></button>`).join('') : '<p class="empty">No model ideas: this lens is weak for this question.</p>'}</div></div>`;
+  });
+  const avail = new Set(q.ideas.map(m => m[0])), hitL = new Set(ticks.map(i => q.ideas[i][0]));
+  const missL = [...avail].filter(k => !used.has(k) && !hitL.has(k));
+  h += `<div class="result ${missL.length === 0 ? 'good' : missL.length <= 2 ? 'mid' : 'low'}">You used ${used.size} of 6 lenses and had ${ticks.length} of the ${q.ideas.length} model ideas.${missL.length ? ' Lenses with useful ideas that you left empty: <b>' + missL.map(k => esc(LENS[k][1])).join(', ') + '</b>.' : ''}</div>`;
+  const ch = a.ch || [], pick = a.pick || [];
+  const chainHTML = (c, cls) => `<div class="chain${cls}"><div class="ci2">${esc(c[0])}</div><div class="crow"><b>Why?</b> ${esc(c[1] || '—')}</div><div class="crow"><b>So what?</b> ${esc(c[2] || '—')}</div><div class="crow"><b>Example:</b> ${esc(c[3] || '—')}</div></div>`;
+  h += `<h2>Idea chains: yours and the model</h2><div class="cmp"><div class="pane mine"><h3>Your chains</h3>${pick.length ? pick.map((p, k) => { const c = ch[k] || {}; return chainHTML([p, c.why, c.so, c.ex], ''); }).join('') : '<p class="empty">You have not developed any ideas yet.</p>'}</div>
+<div class="pane model"><h3>Model chains</h3>${q.chains.map(c => chainHTML(c, ' model')).join('')}</div></div>
+<h3>Position</h3><div class="cmp"><div class="pane mine"><h3>Yours</h3>${a.pos ? `<p>${esc(a.pos)}</p>` : '<p class="empty">Not written.</p>'}</div><div class="pane model"><h3>Model</h3><p>${esc(q.position)}</p></div></div>
+<div class="box tech"><span class="lab">Turn this into an essay</span><p style="margin:0">Introduction: paraphrase the question and give your position. Body paragraph 1: chain 1. Body paragraph 2: chain 2. Conclusion: your position again, in new words.</p></div>
+<div class="actions"><button type="button" class="primary" data-bs="finish">${bsDone(q.id) ? 'Save again and go to a new question' : 'Save and go to a new question'} →</button><a class="ghost" style="text-decoration:none" href="#brainstorm">Trainer home</a></div>`;
+  return h;
+}
+function bsFinish(q) {
+  const a = bsA(q.id), ideas = myIdeas(a), ticks = a.ticks || [], used = new Set(ideas.map(i => i[0]));
+  const avail = [...new Set(q.ideas.map(m => m[0]))], hitL = new Set(ticks.map(i => q.ideas[i][0]));
+  (S.bs.done || (S.bs.done = {}))[q.id] = { lens: [...used], avail, miss: avail.filter(k => !used.has(k) && !hitL.has(k)), hit: ticks.length, tot: q.ideas.length, n: ideas.length, d: Date.now() };
+  save(); const nx = nextBS(q.id); go(nx ? '#' + nx : '#brainstorm');
+}
+let bsSaveT = null;
+work.addEventListener('input', e => {
+  const el = e.target.closest('[data-bsin]'); if (!el || !curBS) return;
+  const a = bsA(curBS.id), k = el.dataset.bsin;
+  if (k === 'grid') { (a.grid || (a.grid = {}))[el.dataset.l] = el.value; bsCount(); if (bsT.id !== curBS.id) { clearInterval(bsT.iv); bsT.iv = null; bsT.left = 180; bsStart(); } }
+  else if (k === 'ch') { const ch = a.ch || (a.ch = [{}, {}]); (ch[+el.dataset.k] || (ch[+el.dataset.k] = {}))[el.dataset.f] = el.value; }
+  else if (k === 'pos') a.pos = el.value;
+  clearTimeout(bsSaveT); bsSaveT = setTimeout(save, 300);
+});
+work.addEventListener('click', e => {
+  const b = e.target.closest('[data-bs]'); if (!b || !curBS || route.page !== 'bsq') return;
+  const q = curBS, a = bsA(q.id), act = b.dataset.bs;
+  if (act === 'step') { go('#' + q.id + '/' + b.dataset.s); return; }
+  if (act === 'focus') { const d = a.dec || (a.dec = {}); d.f = shuffled([q.focus].concat(q.wrong), q.id)[+b.dataset.i]; save(); renderBSRound(); return; }
+  if (act === 'ety') { (a.dec || (a.dec = {})).t = b.dataset.v; save(); renderBSRound(); return; }
+  if (act === 'deccheck') { a.dec.chk = true; save(); renderBSRound(); return; }
+  if (act === 'redec') { a.dec = {}; save(); renderBSRound(); return; }
+  if (act === 'tstart') {
+    if (bsT.iv && bsT.id === q.id) { bsT.left = (bsT.end - Date.now()) / 1000; clearInterval(bsT.iv); bsT.iv = null; bsTick(); return; }
+    if (bsT.id !== q.id) { clearInterval(bsT.iv); bsT.iv = null; bsT.left = 180; }
+    bsStart(); return;
+  }
+  if (act === 'pick') { const t = b.dataset.t, p = a.pick || (a.pick = []), at = p.indexOf(t); if (at >= 0) { p.splice(at, 1); (a.ch || []).splice(at, 1); } else if (p.length < 2) p.push(t); a.devchk = false; save(); renderBSRound(); return; }
+  if (act === 'devcheck') { a.devchk = true; save(); renderBSRound(); const c = $('#devchecks'); if (c) c.scrollIntoView({ block: 'nearest' }); return; }
+  if (act === 'tick') { const i = +b.dataset.i, t = a.ticks || (a.ticks = []), at = t.indexOf(i); if (at >= 0) t.splice(at, 1); else t.push(i); save(); const y = window.scrollY; renderBSRound(); window.scrollTo(0, y); return; }
+  if (act === 'finish') { bsFinish(q); return; }
+});
 
 /* ================================================================ events */
 work.addEventListener('click', e => {
