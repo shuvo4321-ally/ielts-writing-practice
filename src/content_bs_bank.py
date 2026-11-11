@@ -27,6 +27,22 @@ SIDES = {
     "posneg": ("Positive", "Negative"),
 }
 
+# The worked example shown on the Brainstorm step. It uses a question that is NOT one of the 60,
+# so it shows the method without giving away any answers. Rows: (lens, side, short note, full sentence)
+EXAMPLE = dict(
+    q="Public transport should be free for everyone. To what extent do you agree or disagree?",
+    think="If buses and trains became free for everyone, what would change for each lens?",
+    rows=[
+        ("money", "a", "poor families save on travel", "Free buses and trains would save low-income families a large share of their monthly budget."),
+        ("money", "b", "who pays? taxes go up", "Someone still has to pay for the drivers and fuel, so taxes would have to rise."),
+        ("people", "a", "easier to reach jobs", "People without cars could reach jobs and colleges in other parts of the city."),
+        ("gov", "b", "less money for repairs", "Without ticket income, transport companies may have less money to repair old trains."),
+        ("time", "a", "fewer cars in future", "If people get used to free transport, fewer of them may buy cars in the future."),
+        ("health", "a", "less traffic pollution", "Fewer cars on the roads would mean cleaner air in city centres."),
+    ],
+    personal="Not an idea: “My brother takes the bus to college.” That is a personal story. Keep it for the Example in the Develop step: “For example, a student who takes two buses to college could save money every month.”",
+)
+
 # Ideas that can be reused across many questions on the same topic: (idea, ready example, lens)
 BANK = {
     "edu": [

@@ -192,6 +192,7 @@ for q in BS:
     need(q, all(i[0] in lens_keys and i[1] in ("a", "b") and len(i) == 3 for i in q["ideas"]), "idea needs a known lens and side a/b")
     need(q, {i[1] for i in q["ideas"]} == {"a", "b"}, "ideas must cover both sides")
     need(q, len({i[0] for i in q["ideas"]}) >= 4, "ideas must use at least 4 lenses")
+    need(q, all(re.search(r"[.!?]$", x.strip()) and x.strip()[0].isupper() for c in q["chains"] for x in c), "chain parts must be full sentences (capital letter, final full stop)")
     need(q, len(q["chains"]) == 2 and all(len(c) == 4 and all(len(x.split()) >= (3 if j == 0 else 4) for j, x in enumerate(c)) for c in q["chains"]), "needs 2 chains of idea, why, so what, example")
 for k in topic_keys:
     need({"id": "bank"}, len(BB.BANK.get(k, [])) >= 6 and all(r[2] in lens_keys for r in BB.BANK[k]), f"idea bank for {k} needs 6 rows with known lenses")
@@ -207,7 +208,7 @@ for t in T1 + T2:
     if t["task"] == 1:
         t["cloze"].setdefault("extra", [])
 
-DATA = dict(T1=T1, T2=T2, BS=BS, BB=dict(lenses=BB.LENSES, topics=BB.TOPICS, sides=BB.SIDES, bank=BB.BANK), G=dict(
+DATA = dict(T1=T1, T2=T2, BS=BS, BB=dict(lenses=BB.LENSES, topics=BB.TOPICS, sides=BB.SIDES, bank=BB.BANK, example=BB.EXAMPLE), G=dict(
     etypes=G.ETYPES, crit1=[[a, b, {str(k): v for k, v in c.items()}] for a, b, c in G.CRIT_T1],
     crit2=[[a, b, {str(k): v for k, v in c.items()}] for a, b, c in G.CRIT_T2],
     charts=G.CHARTS_TOOLKIT, plan=G.T1_PLAN, skeleton=G.T2_SKELETON, linkers=G.LINKERS, hedging=G.HEDGING, mistakes=G.MISTAKES))

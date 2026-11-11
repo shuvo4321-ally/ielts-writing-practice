@@ -537,7 +537,8 @@ function stepCmp(t) {
 const BB = D.BB, BSQ = D.BS, BSBY = {}; BSQ.forEach(q => { BSBY[q.id] = q; });
 const LENS = {}; BB.lenses.forEach(l => { LENS[l[0]] = l; });
 const TOPIC = {}; BB.topics.forEach(t => { TOPIC[t[0]] = t[1]; });
-const BSTEPS = [['decode', 'Decode'], ['grid', 'Brainstorm'], ['dev', 'Develop'], ['cmp', 'Compare']];
+const BSTEPS = [['decode', 'Decode'], ['grid', 'Brainstorm'], ['dev', 'Develop'], ['write', 'Write'], ['cmp', 'Compare']];
+const ROLE = [['r1', 'Topic sentence: the idea'], ['r2', 'Why: the reason'], ['r3', 'So what: the result'], ['r4', 'Example']];
 const bsA = id => { const a = S.bs.a || (S.bs.a = {}); return a[id] || (a[id] = {}); };
 const bsDone = id => !!(S.bs.done && S.bs.done[id]);
 const bsDoneN = () => BSQ.filter(q => bsDone(q.id)).length;
@@ -563,7 +564,7 @@ function renderBSHome() {
   const n = bsDoneN(), nx = nextBS(), ls = lensStats();
   const cont = BSQ.find(q => !bsDone(q.id) && S.bs.a && S.bs.a[q.id] && S.bs.a[q.id].dec);
   let h = `<div class="hero"><h1>Brainstorm trainer</h1><div class="sub">60 new Task 2 questions, none of them from your 20 essays. Practise finding ideas in three minutes instead of waiting for inspiration.</div>
-<p>You only need <b>two good ideas per body paragraph</b>. The trainer teaches a routine that finds them every time: decode the question, run it through six lenses, then grow your best two ideas into a chain of <i>why → so what → example</i>.</p>
+<p>You only need <b>two good ideas per body paragraph</b>. The trainer teaches a routine that finds them every time: decode the question, run it through six lenses, then grow your best two ideas into a chain of <i>why → so what → example</i>. Finally, write each chain out as a full body paragraph and compare it with a model.</p>
 <div class="actions">${nx ? `<a class="primary" style="text-decoration:none" href="#${cont ? cont.id : nx}">${cont ? 'Continue question ' + cont.id.slice(1) : 'Start a new question'}</a>` : '<span class="result good" style="margin:0">You have finished all 60 questions.</span>'}<a class="ghost" style="text-decoration:none" href="#ideas">Open the idea bank</a><span class="small">${n} of ${BSQ.length} done · each new question is one you have not done</span></div></div>
 <h2>The 3-minute routine</h2><div class="cols">
 <div class="card edge"><h3>1 · Decode (30 seconds)</h3><p>Find the <b>exact claim</b>, not just the topic, and name the essay type. Most weak essays brainstorm the topic instead of the claim.</p></div>
@@ -589,10 +590,10 @@ function renderBSRound() {
   const q = BSBY[route.id]; curBS = q; curBSStep = route.step;
   const a = bsA(q.id);
   const head = `<div class="taskhead"><span class="pnum">Brainstorm · ${q.id.slice(1)}</span><span class="ptype">${esc(TOPIC[q.topic])} · ${esc(ETYPE[q.etype])}</span></div>`;
-  const doneOf = k => k === 'decode' ? !!(a.dec && a.dec.chk) : k === 'grid' ? myIdeas(a).length >= 2 : k === 'dev' ? !!a.devchk : bsDone(q.id);
+  const doneOf = k => k === 'decode' ? !!(a.dec && a.dec.chk) : k === 'grid' ? myIdeas(a).length >= 2 : k === 'dev' ? !!a.devchk : k === 'write' ? !!a.wchk : bsDone(q.id);
   const stepper = `<div class="stepper" role="tablist">${BSTEPS.map((s, i) => `<button type="button" role="tab" class="${s[0] === curBSStep ? 'on' : ''}${doneOf(s[0]) ? ' done' : ''}" data-bs="step" data-s="${s[0]}"><span class="ci">${doneOf(s[0]) && s[0] !== curBSStep ? '✓' : i + 1}</span>${s[1]}</button>`).join('')}</div>`;
   const card = `<details class="taskcard" open><summary>The question</summary><div class="tc"><div class="lim">Task 2 · plan in about 5 minutes, write at least 250 words</div><div class="prompt">${esc(q.q)}</div></div></details>`;
-  const fn = { decode: bsDecode, grid: bsGrid, dev: bsDev, cmp: bsCmp }[curBSStep];
+  const fn = { decode: bsDecode, grid: bsGrid, dev: bsDev, write: bsWrite, cmp: bsCmp }[curBSStep];
   const ks = BSTEPS.map(s => s[0]), i = ks.indexOf(curBSStep);
   const nav = `<div class="stepnav">${i > 0 ? `<button type="button" class="ghost" data-bs="step" data-s="${ks[i - 1]}">← ${BSTEPS[i - 1][1]}</button>` : '<a class="ghost" style="text-decoration:none" href="#brainstorm">← All questions</a>'}${i < ks.length - 1 ? `<button type="button" class="primary" data-bs="step" data-s="${ks[i + 1]}">${BSTEPS[i + 1][1]} →</button>` : '<span></span>'}</div>`;
   work.innerHTML = head + card + stepper + `<div class="stepbody">${fn(q, a)}${nav}</div>`;
@@ -622,11 +623,22 @@ function bsDecode(q, a) {
   return h;
 }
 function bsGrid(q, a) {
-  const g = a.grid || {};
-  return `<h2>Brainstorm with the six lenses</h2><p>Write <b>short notes, one idea per line</b>. Do not judge your ideas yet. Aim for at least 6 ideas in 4 or more lenses, and look for both ${sideTag(q, 'a')} and ${sideTag(q, 'b')}. The timer starts when you type.</p>
+  const g = a.grid || {}, X = BB.example;
+  return `<h2>Brainstorm with the six lenses</h2>
+<div class="box tech"><span class="lab">Think about this, not about your own life</span><p style="margin:0"><b>${esc(q.focus)}</b><br>In each box ask: <i>“If this happens, what changes for … ?”</i> Write <b>one idea per line</b>, as a full sentence or a short note. Look for both ${sideTag(q, 'a')} and ${sideTag(q, 'b')}. Your own stories belong in the <b>Example</b> of the Develop step.</p></div>
+<details class="howto"><summary>See a worked example (a different question)</summary><div class="hb"><p><b>Question:</b> <i>${esc(X.q)}</i><br>${esc(X.think)}</p>
+<div class="tablewrap"><table><tr><th>Box</th><th>Short note</th><th>The same idea as a sentence</th></tr>${X.rows.map(r => `<tr><td class="k">${esc(LENS[r[0]][1])}</td><td>${esc(r[2])}</td><td>${r[1] === 'a' ? '✅' : '❌'} ${esc(r[3])}</td></tr>`).join('')}</table></div>
+<p class="small">✅ supports the statement · ❌ against it. The Society box stayed empty for this question, and that is normal.</p><div class="box warn" style="margin-bottom:0"><span class="lab">Personal story or idea?</span><p style="margin:0">${esc(X.personal)}</p></div></div></details>
 <div class="timer" id="bstimer"><span class="tt" id="bstt">3:00</span><button type="button" class="ghost sm" data-bs="tstart" id="bstbtn">Start 3 minutes</button><span class="small" id="bscount"></span></div>
 <div class="box warn" id="bsup" hidden><span class="lab">Time is up</span><p style="margin:0">In the exam you would stop here and choose your two best ideas. Finish your line, then go to Develop.</p></div>
-<div class="lgrid">${BB.lenses.map(l => `<div class="lcell"><h4>${esc(l[1])}</h4><div class="lq">${esc(l[2])}</div><textarea data-bsin="grid" data-l="${l[0]}" aria-label="${esc(l[1])} ideas" placeholder="One idea per line">${esc(g[l[0]] || '')}</textarea></div>`).join('')}</div>`;
+<div class="lgrid">${BB.lenses.map(l => `<div class="lcell"><h4>What changes for: ${esc(l[1])}?</h4><div class="lq">${esc(l[2])}</div><textarea data-bsin="grid" data-l="${l[0]}" aria-label="${esc(l[1])} ideas" placeholder="One idea per line">${esc(g[l[0]] || '')}</textarea><div class="hintrow"><button type="button" class="ghost sm" data-bs="hint" data-l="${l[0]}">Hint</button><div class="hints" id="hint-${l[0]}">${hintHTML(q, a, l[0])}</div></div></div>`).join('')}</div>`;
+}
+/* each Hint click shows the start of one more model idea for that lens */
+function hintHTML(q, a, lens) {
+  const n = (a.hints || {})[lens] || 0; if (!n) return '';
+  const ms = q.ideas.filter(m => m[0] === lens);
+  if (!ms.length) return '<span class="small">No strong idea in this box for this question. Try another box.</span>';
+  return ms.slice(0, n).map(m => { const w = m[2].split(' '); return `<div class="hint">${sideTag(q, m[1])}${esc(w.slice(0, Math.min(6, Math.ceil(w.length / 2))).join(' '))} …</div>`; }).join('') + (n >= ms.length ? '<span class="small">That is every model idea for this box.</span>' : '');
 }
 function bsCount() {
   const el = $('#bscount'); if (!el || !curBS) return;
@@ -657,9 +669,9 @@ function bsDev(q, a) {
     pick.forEach((p, k) => {
       const c = ch[k] || (ch[k] = {});
       h += `<div class="chain"><div class="ci2">Idea ${k + 1}: ${esc(p)}</div>
-<label for="c${k}w">Why? (the reason behind it)</label><textarea id="c${k}w" data-bsin="ch" data-k="${k}" data-f="why">${esc(c.why || '')}</textarea>
-<label for="c${k}s">So what? (the result or consequence)</label><textarea id="c${k}s" data-bsin="ch" data-k="${k}" data-f="so">${esc(c.so || '')}</textarea>
-<label for="c${k}e">Example (a specific person, place, number or situation)</label><textarea id="c${k}e" data-bsin="ch" data-k="${k}" data-f="ex">${esc(c.ex || '')}</textarea></div>`;
+<label for="c${k}w">Why? The reason behind it, as one sentence</label><textarea id="c${k}w" data-bsin="ch" data-k="${k}" data-f="why">${esc(c.why || '')}</textarea>
+<label for="c${k}s">So what? The result or consequence, as one sentence</label><textarea id="c${k}s" data-bsin="ch" data-k="${k}" data-f="so">${esc(c.so || '')}</textarea>
+<label for="c${k}e">Example: one specific person, place, number or situation (your own story can go here)</label><textarea id="c${k}e" data-bsin="ch" data-k="${k}" data-f="ex">${esc(c.ex || '')}</textarea></div>`;
     });
     h += `<h3>Your position in one sentence</h3><p class="small">${esc(posHint(q))}</p><textarea class="pos" data-bsin="pos" aria-label="Your position">${esc(a.pos || '')}</textarea>
 <div class="actions"><button type="button" class="primary" data-bs="devcheck">Check my plan</button><span class="small">${pick.length < 2 ? 'Choose one more idea.' : ''}</span></div><ul class="checks" id="devchecks">${a.devchk ? devChecks(q, a).map(c => `<li class="${c[0]}"><span>${c[1]}</span></li>`).join('') : ''}</ul>`;
@@ -685,6 +697,42 @@ function devChecks(q, a) {
   out.push([nwords(pos) < 8 ? 'no' : sig.test(pl) ? 'ok' : 'warn', `<b>Position:</b> ${nwords(pos) < 8 ? 'write one full sentence (8 or more words).' : sig.test(pl) ? 'clear.' : esc(posHint(q))}`]);
   return out;
 }
+const sentsOf = p => String(p || '').trim().split(/(?<=[.!?])\s+/).filter(s => /\w/.test(s));
+function bsWrite(q, a) {
+  const pick = a.pick || [], ch = a.ch || [];
+  if (pick.length < 2) return `<h2>Write two body paragraphs</h2><div class="box warn"><span class="lab">First, develop two ideas</span><p style="margin:0">Choose two ideas and fill in their Why, So what and Example in the Develop step, then come back here.</p></div>`;
+  const para = a.para || [];
+  let h = `<h2>Write two body paragraphs</h2><p>Now turn each chain into <b>full sentences</b>. A body paragraph has four parts, in this order:</p>
+<div class="roles">${ROLE.map((r, i) => `<span class="${r[0]}">${i + 1}. ${esc(r[1])}</span>`).join('')}</div>
+<div class="box tech"><span class="lab">Words that join the parts</span><p style="margin:0"><b>Why:</b> The main reason is that … · This is because … · This happens because …<br><b>So what:</b> As a result, … · This means that … · Consequently, …<br><b>Example:</b> For example, … · For instance, … · A clear example is …</p></div>`;
+  pick.forEach((p, k) => {
+    const c = ch[k] || {};
+    h += `<h3>Paragraph ${k + 1}</h3><div class="chain"><div class="crow"><b>Idea:</b> ${esc(p)}</div><div class="crow"><b>Why?</b> ${esc(c.why || '—')}</div><div class="crow"><b>So what?</b> ${esc(c.so || '—')}</div><div class="crow"><b>Example:</b> ${esc(c.ex || '—')}</div></div>
+<textarea class="wbox pbox" data-bsin="para" data-k="${k}" aria-label="Paragraph ${k + 1}" placeholder="Start with your idea as a topic sentence, then explain why, then the result, then the example.">${esc(para[k] || '')}</textarea><div class="small" id="pw${k}">${nwords(para[k])} words · ${sentsOf(para[k]).length} sentences · aim for 80–120 words</div>`;
+  });
+  h += `<div class="actions"><button type="button" class="primary" data-bs="wcheck">Check my paragraphs</button></div>`;
+  if (a.wchk) pick.forEach((p, k) => { h += `<h4 class="sidehd">Paragraph ${k + 1}</h4><ul class="checks">${paraChecks(para[k]).map(c => `<li class="${c[0]}"><span>${c[1]}</span></li>`).join('')}</ul>`; });
+  return h;
+}
+function paraChecks(p) {
+  p = String(p || '').trim(); const out = [], n = nwords(p), ss = sentsOf(p), low = p.toLowerCase();
+  if (!n) return [['no', '<b>Empty:</b> write this paragraph first.']];
+  out.push([n >= 70 && n <= 140 ? 'ok' : n >= 50 ? 'warn' : 'no', `<b>Length:</b> ${n} words. ${n < 70 ? 'A body paragraph is usually 80–120 words. Add more explanation or detail to the example.' : n > 140 ? 'Long. Cut repetition so both paragraphs fit in 40 minutes.' : 'A good length.'}`]);
+  out.push([ss.length >= 4 ? 'ok' : 'warn', `<b>Sentences:</b> ${ss.length}. ${ss.length >= 4 ? 'Enough for idea, reason, result and example.' : 'Aim for at least 4: idea, reason, result, example.'}`]);
+  const bad = ss.filter(s => !/^["“(]?[A-Z0-9]/.test(s.trim()));
+  out.push([bad.length || !/[.!?]["”)]?$/.test(p) ? 'warn' : 'ok', `<b>Capitals and full stops:</b> ${bad.length ? 'a sentence starts with a small letter: “' + esc(bad[0].slice(0, 30)) + '…”' : !/[.!?]["”)]?$/.test(p) ? 'the paragraph does not end with a full stop.' : 'every sentence starts with a capital and the paragraph ends with a full stop.'}`]);
+  const long = ss.filter(s => nwords(s) > 38);
+  if (long.length) out.push(['warn', `<b>Long sentence:</b> one sentence has ${nwords(long[0])} words. Split it into two so the meaning stays clear.`]);
+  const why = /\b(because|the (main )?reason|due to|since|as a result of|this is why)\b/.test(low), so = /\b(as a result|therefore|consequently|this means|which means|so that|this leads to|leading to|this would|in turn|so )\b/.test(low), ex = /\b(for example|for instance|such as|a clear example|to illustrate|a case in point)\b/.test(low) || /\d/.test(p);
+  out.push([why && so ? 'ok' : 'warn', `<b>Reason and result words:</b> ${why ? 'reason ✓' : 'no reason word (because, the main reason is…)'} · ${so ? 'result ✓' : 'no result word (as a result, this means…)'}.`]);
+  out.push([ex ? 'ok' : 'warn', `<b>Example:</b> ${ex ? 'signalled.' : 'no example signal. Start the example sentence with “For example,” or “For instance,”.'}`]);
+  if (/(^|[\s.,])i\s/.test(p)) out.push(['no', '<b>“I”:</b> write <i>I</i> as a capital letter.']);
+  const my = (low.match(/\bmy\b/g) || []).length;
+  if (my >= 3) out.push(['warn', `<b>Personal language:</b> “my” appears ${my} times. Keep personal details inside the example; the rest should talk about people in general (students, families, governments).`]);
+  if (/\b\w+['’](t|re|ve|ll|d|m)\b/.test(p)) out.push(['warn', '<b>Contractions:</b> write <i>do not</i>, not <i>don’t</i>.']);
+  return out;
+}
+const roleHTML = c => c.map((s, i) => `<span class="${ROLE[i][0]}">${esc(s)}</span>`).join(' ');
 function bsCmp(q, a) {
   const ideas = myIdeas(a), ticks = a.ticks || [], used = new Set(ideas.map(i => i[0]));
   let h = `<h2>Compare with the model idea map</h2><p>For each lens, read the model ideas and tick the ones you had, or something close. The ideas you did not have show you where to look next time.</p>`;
@@ -700,6 +748,9 @@ function bsCmp(q, a) {
   const chainHTML = (c, cls) => `<div class="chain${cls}"><div class="ci2">${esc(c[0])}</div><div class="crow"><b>Why?</b> ${esc(c[1] || '—')}</div><div class="crow"><b>So what?</b> ${esc(c[2] || '—')}</div><div class="crow"><b>Example:</b> ${esc(c[3] || '—')}</div></div>`;
   h += `<h2>Idea chains: yours and the model</h2><div class="cmp"><div class="pane mine"><h3>Your chains</h3>${pick.length ? pick.map((p, k) => { const c = ch[k] || {}; return chainHTML([p, c.why, c.so, c.ex], ''); }).join('') : '<p class="empty">You have not developed any ideas yet.</p>'}</div>
 <div class="pane model"><h3>Model chains</h3>${q.chains.map(c => chainHTML(c, ' model')).join('')}</div></div>
+<h2>Paragraphs: yours and the model</h2><p>Each model paragraph is its chain written out as sentences. The colours show the job of each sentence.</p><div class="roles">${ROLE.map(r => `<span class="${r[0]}">${esc(r[1])}</span>`).join('')}</div>
+<div class="cmp"><div class="pane mine"><h3>Your paragraphs</h3>${(a.para || []).filter(x => x && x.trim()).length ? (a.para || []).filter(x => x && x.trim()).map(x => `<p>${esc(x)}</p>`).join('') : '<p class="empty">Not written yet. Go back to the Write step.</p>'}</div>
+<div class="pane model"><h3>Model paragraphs</h3>${q.chains.map(c => `<p class="rolep">${roleHTML(c)}</p>`).join('')}</div></div>
 <h3>Position</h3><div class="cmp"><div class="pane mine"><h3>Yours</h3>${a.pos ? `<p>${esc(a.pos)}</p>` : '<p class="empty">Not written.</p>'}</div><div class="pane model"><h3>Model</h3><p>${esc(q.position)}</p></div></div>
 <div class="box tech"><span class="lab">Turn this into an essay</span><p style="margin:0">Introduction: paraphrase the question and give your position. Body paragraph 1: chain 1. Body paragraph 2: chain 2. Conclusion: your position again, in new words.</p></div>
 <div class="actions"><button type="button" class="primary" data-bs="finish">${bsDone(q.id) ? 'Save again and go to a new question' : 'Save and go to a new question'} →</button><a class="ghost" style="text-decoration:none" href="#brainstorm">Trainer home</a></div>`;
@@ -708,7 +759,7 @@ function bsCmp(q, a) {
 function bsFinish(q) {
   const a = bsA(q.id), ideas = myIdeas(a), ticks = a.ticks || [], used = new Set(ideas.map(i => i[0]));
   const avail = [...new Set(q.ideas.map(m => m[0]))], hitL = new Set(ticks.map(i => q.ideas[i][0]));
-  (S.bs.done || (S.bs.done = {}))[q.id] = { lens: [...used], avail, miss: avail.filter(k => !used.has(k) && !hitL.has(k)), hit: ticks.length, tot: q.ideas.length, n: ideas.length, d: Date.now() };
+  (S.bs.done || (S.bs.done = {}))[q.id] = { lens: [...used], avail, miss: avail.filter(k => !used.has(k) && !hitL.has(k)), hit: ticks.length, tot: q.ideas.length, n: ideas.length, hints: Object.values(a.hints || {}).reduce((x, y) => x + y, 0), words: (a.para || []).reduce((x, p) => x + nwords(p), 0), d: Date.now() };
   save(); const nx = nextBS(q.id); go(nx ? '#' + nx : '#brainstorm');
 }
 let bsSaveT = null;
@@ -718,6 +769,7 @@ work.addEventListener('input', e => {
   if (k === 'grid') { (a.grid || (a.grid = {}))[el.dataset.l] = el.value; bsCount(); if (bsT.id !== curBS.id) { clearInterval(bsT.iv); bsT.iv = null; bsT.left = 180; bsStart(); } }
   else if (k === 'ch') { const ch = a.ch || (a.ch = [{}, {}]); (ch[+el.dataset.k] || (ch[+el.dataset.k] = {}))[el.dataset.f] = el.value; }
   else if (k === 'pos') a.pos = el.value;
+  else if (k === 'para') { const i = +el.dataset.k; (a.para || (a.para = []))[i] = el.value; const w = $('#pw' + i); if (w) w.textContent = nwords(el.value) + ' words · ' + sentsOf(el.value).length + ' sentences · aim for 80–120 words'; }
   clearTimeout(bsSaveT); bsSaveT = setTimeout(save, 300);
 });
 work.addEventListener('click', e => {
@@ -736,6 +788,8 @@ work.addEventListener('click', e => {
   if (act === 'pick') { const t = b.dataset.t, p = a.pick || (a.pick = []), at = p.indexOf(t); if (at >= 0) { p.splice(at, 1); (a.ch || []).splice(at, 1); } else if (p.length < 2) p.push(t); a.devchk = false; save(); renderBSRound(); return; }
   if (act === 'devcheck') { a.devchk = true; save(); renderBSRound(); const c = $('#devchecks'); if (c) c.scrollIntoView({ block: 'nearest' }); return; }
   if (act === 'tick') { const i = +b.dataset.i, t = a.ticks || (a.ticks = []), at = t.indexOf(i); if (at >= 0) t.splice(at, 1); else t.push(i); save(); const y = window.scrollY; renderBSRound(); window.scrollTo(0, y); return; }
+  if (act === 'hint') { const l = b.dataset.l, hs = a.hints || (a.hints = {}), max = q.ideas.filter(m => m[0] === l).length; hs[l] = Math.min((hs[l] || 0) + 1, max + 1); save(); const box = $('#hint-' + l); if (box) box.innerHTML = hintHTML(q, a, l); return; }
+  if (act === 'wcheck') { a.wchk = true; save(); const y = window.scrollY; renderBSRound(); window.scrollTo(0, y); return; }
   if (act === 'finish') { bsFinish(q); return; }
 });
 

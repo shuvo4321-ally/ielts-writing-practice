@@ -56,9 +56,10 @@ For practising **finding ideas**, separately from writing. The 60 questions are 
 | Step | What you do |
 |---|---|
 | 1 Decode | Choose the real focus of the question out of three (two are traps: too broad, or a twisted claim), and name the essay type |
-| 2 Brainstorm | Type short ideas into six lens boxes (Money, Individuals, Society, Government, Time, Health and environment) against a 3-minute timer |
+| 2 Brainstorm | Type ideas, as notes or full sentences, into six lens boxes (Money, Individuals, Society, Government, Time, Health and environment) against a 3-minute timer. The real focus of the question stays at the top, a worked example (for a different question) shows what to write, and a Hint button in each box shows the start of a model idea |
 | 3 Develop | Pick your two best ideas and grow each one into a chain: Why? → So what? → Example, then write your position in one sentence |
-| 4 Compare | Your ideas next to a model idea map for each lens (tick the ones you had), your chains next to two model chains, your position next to the model |
+| 4 Write | Turn each chain into a full body paragraph (topic sentence, reason, result, example). Checks: length, number of sentences, capitals and full stops, reason/result/example words, personal language |
+| 5 Compare | Your ideas next to a model idea map for each lens (tick the ones you had), your chains next to two model chains, your paragraphs next to model paragraphs with each sentence's job colour-marked, your position next to the model |
 
 The trainer records which lenses you use and which you miss, and names your weakest lens. The **Idea bank** page has six reusable ideas with ready examples for each of the 12 topics.
 

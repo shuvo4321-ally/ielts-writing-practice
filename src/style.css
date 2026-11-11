@@ -269,3 +269,15 @@ textarea.pos { min-height: 60px; border-color: var(--navy); }
 .tick .bx { width: 18px; height: 18px; border: 1.5px solid var(--faint); display: grid; place-items: center; font-family: var(--f-ui); font-size: 12px; font-weight: 700; margin-top: 2px; background: #fff; }
 .tick.on { background: var(--ok-soft); border-color: var(--ok); } .tick.on .bx { background: var(--ok); border-color: var(--ok); color: #fff; } .tick.on .bx::after { content: "✓"; }
 .rail .nv .small { color: inherit; opacity: .75; font-size: 12px; }
+details.howto { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--psg-edge); margin: 0 0 12px; }
+details.howto > summary { cursor: pointer; padding: 10px 14px; font-family: var(--f-ui); font-size: 14.5px; font-weight: 700; color: var(--psg-lab); }
+details.howto .hb { padding: 0 14px 12px; }
+.hintrow { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; }
+.hintrow > button { flex: none; }
+.hints { flex: 1; min-width: 0; }
+.hint { font-size: 14.5px; line-height: 1.4; margin: 2px 0 4px; color: var(--muted); }
+.roles { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 12px; font-family: var(--f-ui); font-size: 13px; }
+.roles span { padding: 3px 8px; }
+.r1 { background: var(--hA); } .r2 { background: var(--tech); } .r3 { background: var(--hP); } .r4 { background: #F3E3F0; }
+.rolep span { padding: 1px 0; line-height: 1.75; }
+textarea.wbox.pbox { min-height: 170px; margin-top: 4px; }
